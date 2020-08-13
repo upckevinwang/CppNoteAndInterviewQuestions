@@ -104,7 +104,7 @@ set的特性：所有的元素会根据元素的键值自动排序，与map不�
 4. count();//返回某个元素的个数，因为不允许有相同的键值，所以count()返回的值只有0或1。  
 5. erase();//删除某个元素，可以是set中的键值或迭代器，set.erase(key)或者set.erase(iterator)。
 #priority_queue优先队列
-头文件#include <queue\>
+头文件#include <queue\>  
 priority\_queue<int,vector<int\>,greater<int\>>;小根堆  
 priority\_queue<int,vector<int\>,less<int\>>;大根堆  
 默认情况下是大根堆，当需要存储指针时或结构体时，需要自己重写仿函数。  
@@ -125,7 +125,7 @@ priority\_queue<int,vector<int\>,less<int\>>;大根堆
 			CxString(int size){//单参数构造函数
 				......
 			}
-	}
+	};
 	CxString string1(24);//合法
 	CxString string2=10;//合法，此时会调用转换操作，实际等于CxString string2(10);
 	但当构造函数前加上explicit关键字时，该操作便变成非法的，取消了类构造函数的隐式自动转换。
@@ -194,9 +194,10 @@ reinterpret_cast<x>(y);(其中x与y必须有一个值是指针类型)
 <pre class="prettyprit lang-指定样式">
 	char A='a';
 	char *p=&A;
-	cout<<p<<endl;//此时，输出a，而不是p的地址，因为运算符重载要打印地址。  
+	cout<< p<< endl;
+	//此时，输出a，而不是p的地址，因为运算符重载要打印地址。  
 	//只针对char类型的指针，对于其他类型的指针可以正确输出地址。  
-	cout<<reinterpret_cast<void*>(p)<<endl;//此时便可以输出p的地址。
+	cout<< reinterpret_cast< void*>(p)<< endl;//此时便可以输出p的地址。
 </pre>
 注意在《More Effective C++》中提到，reinterpret\_cast几乎都是运行期定义（implementation-defined），所以使用reinterpret_cast的代码很难移植。
 #C++多态
@@ -219,7 +220,7 @@ reinterpret_cast<x>(y);(其中x与y必须有一个值是指针类型)
 			virtual void resize();
 		protected:
 			pos center;
-	}
+	};
 	class Ellipse:public Shape{
 		public:
 			Ellipse(float majr,float minr);
@@ -227,7 +228,7 @@ reinterpret_cast<x>(y);(其中x与y必须有一个值是指针类型)
 		protected:
 			float major_axis;
 			float minor_axis;
-	}
+	};
 </pre>
 针对上述代码，基类Shape的内存分布为：虚指针（vPointer）和成员变量center。虚函数表为：~Shapw();render();resize();  
 派生类Ellipse的内存分布为：虚指针（vPointer）、center、major\_axis、minor\_axis。虚函数表为：   
@@ -243,6 +244,19 @@ resize();//继承自父类
 4. 静态成员函数不能是虚函数，因为静态函数的特点是不受限于某个对象。  
 5. 构造函数也不能是虚函数，因为在构造的时候，对象还是一片未定型的空间，只有构造完成之后，对象才是类的实例。  
 6. 析构函数通常是虚函数。 
+7. 用override来说明派生类中的虚函数，这样便可以在派生类中检查虚函数是否覆盖基类中的虚函数。若是使用fina修饰，则表示不允许后续的其他函数覆盖该函数。  
+<pre class="prettyprit lang-指定样式">
+	struct B{
+		virtual void f1(int) const;
+		virtual void f2();
+		void f3();
+	};
+	struct C:B{
+		void f1(int) const override;//合法
+		void f2(int) override;//非法，基类中没有f2(int)函数
+		void f3() override;//非法，f3不是虚函数，不能用override修饰。
+	};
+</pre>
 #pair的使用
 头文件#include <utility\>
 pair<T1,T2> P;  
@@ -316,11 +330,189 @@ Point::init()非法，不能使用类名调用非static成员函数。
 		static void output();
 		void init(){
 			output();
-		}
+		};
 </pre>
 合法，类的非static成员函数可以访问static成员函数。  
 5）类的static成员变量在使用前必须初始化。  
 例：在类中有定义： private: static int m;  
 类外初始化： int Point::m=10;//初始化时不用加static，而且必须要在类外进行初始化。  
-静态成员变量不属于这个类，即sizeof(className)的值不包括此m的大小。  
-总结：对象与对象之间的成员变量是相互独立的，要想共享，则需要使用静态成员函数和静态成员变量。
+静态成员变量不属于这个类，即sizeof(className)的值不包括静态成员变量的大小。  
+总结：对象与对象之间的成员变量是相互独立的，要想共享，则需要使用静态成员函数和静态成员变量。  
+#const前后修饰指针
+<pre class="prettyprit lang-指定样式">
+	char greeting[]="hello";
+	char* p=greeting;//非const指针，非const数据
+	const char* p=greeting;//非const指针，const数据
+	char* const p=greeting;//const指针，非const数据
+	const char* const p=greeting;//const指针，const数据
+</pre>
+const若出现在\*左边，则表示被指物为常量；若出现在右边，则表示指针自身为常量；若出现在两边，则表示被指物和指针均为常量。（左物右针）  
+const char* p与char const *p等价。  
+在修饰类的成员函数时，const放在函数后边，表示该函数不会对该对象做任何更改。  
+#优先队列自写仿函数  
+以出入链表，对链表进行排序为例。  
+<pre class="prettyprit lang-指定样式">
+	struct ListNode{
+		int val;
+		ListNode *next;
+		ListNode(int x):val(x),next(nullptr){}
+	};
+	struct cmp{
+		bool operator()(const ListNode* a,const ListNode* b){
+			return a->val>b->val;//小根堆，堆内元素均大于堆顶元素
+		}
+	}；
+	priority_queue< ListNode*,vector< ListNode*>,cmp> que;
+</pre>
+#Lambda表达式
+Lambda表达式本质上是一个匿名函数。  
+例：计算num数组中能被3整除的元素个数。  
+1）<pre class="prettyprit lang-指定样式">
+	count=count_if(num.begin(),num.end(),[](int x){return x%3==0;});
+</pre>
+2)<pre class="prettyprit lang-指定样式">
+	int count=0;
+	for_each(num.begin(),num.end(),[&count](int x){count+=x%3==0;});
+</pre>
+[](int x)中[]代替了函数名（匿名函数），并且没有声明返回类型，如果需要声明返回类型，要用尾置返回类型。  
+引入auto：  
+<pre class="prettyprit lang-指定样式">
+	auto m=[](int x){return x%3==0;};
+</pre>
+Lambda可捕捉访问作用域内的动态变量，名称放在[]内。  
+用lambda实现仿函数功能。  
+<pre class="prettyprit lang-指定样式">
+	autocomp=[](const ListNode* a,const ListNode* b){return a->val>b->val;};
+	priority_queue< ListNode*,vector<ListNode*>,decltype(comp)> que(comp);//注意需要加decltype
+</pre>
+注：对sort()使用lambda时，不需要decltype关键字，而且对sort()自写仿函数时，只可重写>或<，不可重写>=或<=，会发生越界行为。  
+#public,private,protected关键字
+1）private成员只能被本类成员（类内、派生类不行）和友员访问。    
+2）protected可以被派生类访问。    
+3）final，在类名之后加final，禁止类被继承；在函数名之后加final，禁止虚函数在子类中被重载。  
+##基类与派生类之间的说明符
+1）public继承：基类public、protected、private成员在派生类中保持不变。  
+2）protected继承：基类public、protected、private成员在派生类中变成protected、protected、private。  
+3）private继承：基类public、protected、private成员在派生类中全部变成private。  
+例：  
+<pre class="prettyprit lang-指定样式">
+	class A{
+		protected:
+			int a;
+		public:
+			int b;
+		private:
+			int c;
+	};
+	A tempA;
+	tempA.a=10;//非法，在类外不可以访问protected
+	tempA.b=10;//合法，在类外可以访问public
+	tempA.c=10;//非法，在类外不可以访问private
+	class B:public A{
+		cout<< a<< endl;//合法，在类内可以访问protected
+		cout<< b<< endl;//合法，public成员
+		cout<< c<< endl;//非法，private成员不能被派生类访问
+	};
+</pre>
+若想在派生类中调用基类中同名成员函数，可以使用B.A::func();  
+#智能指针
+##auto_ptr
+头文件#include \<memory>  
+是一种防止“被抛出异常时发生资源泄漏”的只能指针。  
+思想：用一个对象存储需要被自动释放的资源，依靠析构函数释放资源。保证在任何情况下，只要自己被摧毁，就一定连带释放自己的资源。  
+1)没有所有的指针算术运算，不允许使用一般指针惯用的赋值初始化方式。  
+<pre class="prettyprit lang-指定样式">
+	auto_ptr< classA> ptr1(new classA);//合法
+	auto_ptr< classA> ptr2=new classA;//非法
+</pre>
+2）auto_ptr拥有权的转移  
+<pre class="prettyprit lang-指定样式">
+	auto_ptr< classA> ptr1(new classA);
+	auto_ptr< classA> ptr2(ptr1);//ptr2拥有了new出来的对象，ptr1不再拥有它，即所有权的转移，对象只会在ptr2销毁时被delete一次。
+</pre>
+若ptr2被赋值之前正拥有一个对象，赋值时将会delete掉那个对象。  
+只有auto_ptr可以用来当做另一个auto_ptr的初值，普通指针是不行的，例：
+<pre class="prettyprit lang-指定样式">
+	auto_ptr< classA> ptr;//可以定义空的auto_ptr指针，因为构造函数有默认值0。
+	ptr =new classA;//非法
+	ptr=auto_ptr< classA>(new classA);//合法
+</pre>
+3）被当做一个参数传递给函数时，被调用端的参数取得auto_ptr的所有权，所函数不再将其传递出去，它所指的对象就会在函数退出时删除。  
+4）const并非意味着不可修改auto_ptr的所拥有的对象，而是指不能更改auto_ptr的所有权。  
+###auto_ptr的使用原则
+1. 不要使用auto_ptr绑定指向静态分配对象的指针。  
+2. 不要使用两个auto_ptr指向同一个对象。  
+3. 不要使用auto_ptr对象保存指向动态分配数组的指针。  
+4. 不要将auto_ptr保存在容器中。  
+##shared_ptr
+与auto_ptr不同的是，shared_ptr是一个标准的共享所有权的智能指针，允许多个指针指向同一个对象，通过计数机制实现，解决了auto_ptr独占的局限性。  
+成员函数有：  
+1）use_count：返回引用计数的个数。  
+2）unique：返回是否是独占所有权=1。  
+3）swap：交换两个shared_ptr对象。  
+4）reset：放弃内部对象的所有权或拥有对象的变更，使use_count减1.  
+5）get：返回内部指针。  
+例：  
+<pre class="prettyprit lang-指定样式">
+	auto r=make_shared< int>();//此时r的use_count=1.
+	auto q=r;//q原来指向的对象的use_count-1，r的use_count+1，此时q和r指向同一对象，所以q和r的use_count均为2.  
+</pre>
+使用make_shared用其参数来构造给定类型的对象。make_shared函数是一种最安全的分配和使用动态内存的方法，返回一个指向对象的shared_ptr，创建shared_ptr最好使用make_shared函数。    
+一旦use_count为0，便会自动释放自己所管理的对象。  
+在容器中使用shared_ptr，需要用erase去处理用完的shared_ptr。  
+shared_ptr共享相同的状态，而不是多个对象独立的拷贝。  
+注意多个线程同时读同一个shared_ptr对象是线程安全的，但如果多个线程对同一个shared_ptr对象进行读和写，则需要加锁。不同的shared_ptr可以被多线程同时修改。    
+###使用规范
+1）不delete get返回的指针。  
+2）若使用了get返回的指针，最后一个对应的shared_ptr销毁后，所使用的指针便无效了。  
+3）若使用的shared_ptr管理的资源不是new分配的，则需要传递一个删除器。  
+##unique_ptr
+独占所指向的对象，同一时刻只能有一个unique_ptr指向给定的对象，无法复制，禁止拷贝语义，可以使用移动语义。  
+1）创建unique_ptr  
+<pre class="prettyprit lang-指定样式">
+	unique_ptr< int> pInt(new int(5));
+</pre>
+2）无法复制构造和赋值操作  
+<pre class="prettyprit lang-指定样式">
+	unique_ptr< int> pInt2(pInt);//非法
+	unique_ptr< int> Pint3=pInt;//非法
+</pre>
+因为独占性，其原理是通过将拷贝构造函数和赋值函数设为private/delete。   
+但是有一个例外：可以拷贝或赋值一个将要销毁的unique_ptr，例如从函数返回一个局部对象的拷贝。  
+<pre class="prettyprit lang-指定样式">
+	unique_ptr< int> clone(int p){
+		return unique_ptr< int>(new int(p));
+	}
+</pre>   
+3）可以进行移动构造和移动赋值操作（用来转移所有权，转移后原指针变为空）。  
+<pre class="prettyprit lang-指定样式">
+	unique_ptr< int> pInt2=move(pInt);//转移所有权
+</pre>
+转移所有权还可以使用：  
+<pre class="prettyprit lang-指定样式">
+	unique_ptr< int> pInt2(pInt.release());
+</pre>
+4）可以从函数返回一个unique_ptr。
+###unique_ptr的应用
+1）为动态申请的资源提供异常安全保证。  
+2）返回函数内动态申请资源的所有权。  
+3）在容器中保存指针。  
+<pre class="prettyprit lang-指定样式">
+	vector< unique_ptr< int>> vec;
+	unique_ptr< int> p(new int(5));
+	vec.emplace_back(move(p));//使用移动语义
+</pre>
+4）管理动态数组
+<pre class="prettyprit lang-指定样式">
+	unique_ptr< int[]> p(new int[5]{1,2,3,4,5});
+	p[0]=0;//重载了[]
+</pre>
+5）作为auto_ptr的替代品  
+##weak_ptr
+是一种不控制对象生命周期的智能指针，指向一个shared_ptr管理的对象，目的是配合shared_ptr而引入的一种智能指针，只可以从shared_ptr或weak_ptr对象构造，不会对use_count造成影响。   
+支持拷贝或赋值，但不会影响use_count，主要用来解决shared_ptr因循环引用而有不能释放资源的问题。  
+成员函数有：  
+1）expired：用于检测所管理的对象是否已经释放，若释放则返回true，否则返回false。  
+2）lock：用于获取所管理的对象的强引用（shared_ptr），若expired为true，则返回一个空的shared_ptr；否则返回一个shared_ptr。  
+3）use_count：返回与shared_ptr共享的对象的引用计数。  
+4）reset：将weak_ptr置空。  
