@@ -84,6 +84,10 @@ auto在这里的作用也被称为返回值占位，只为返回值占一个位�
 任何的一个STL算法在使用时，都需要一对迭代器标示的空间，且区间是左闭右开。  
 3）迭代器  
 主要用来将容器与算法结合起来，是所谓的“泛型指针”。从实现的角度来看是一种将*、->、++、--等操作重载的类模板，所有的STL容器都有自己的迭代器。  
+迭代器与指针:  
+迭代器是模板类，从某种程度上讲，它是泛型指针，它提供一种方法顺序访问一个聚合对象中各个元素，但是不会暴露该对象的内部结构。迭代器本质上时封装了原生指针，是指针概念的一种提升，提供了比指针更高级的行为，相当于一种智能指针。  
+迭代器返回的是对象引用而不是对象的值，迭代器在使用后就释放了，不能再继续使用，但是指针可以。  
+迭代器是指针的抽象泛化，指针是迭代器的一种，指针只能用于特定的容器。  
 4）仿函数  
 是一种行为类似函数，实际是重载了()的class或class template。  
 一般函数指针可视为狭义的仿函数。  
@@ -129,6 +133,27 @@ priority\_queue<int,vector<int\>,less<int\>>;大根堆
 	CxString string1(24);//合法
 	CxString string2=10;//合法，此时会调用转换操作，实际等于CxString string2(10);
 	但当构造函数前加上explicit关键字时，该操作便变成非法的，取消了类构造函数的隐式自动转换。
+</pre>
+禁止单参数构造函数的隐式转换，典型的是拷贝构造函数。  
+例：
+<pre class="prettyprit lang-指定样式">
+	class A{
+		private:
+			int number;
+		public:
+			A(int a){number=a;}
+	};
+	A instance=2;//不会调用赋值运算符，会隐式调用单一参数构造函数。
+</pre>
+单参数构造函数的调用时机：  
+1）用于初始化对象。A instance=2；
+2）作为函数参数被调用时 void func(A a){} func(x)
+3）作为函数返回值时，仅限于值传递
+<pre class="prettyprit lang-指定样式">
+	A Get(){
+		T x;
+		return x;
+	}
 </pre>
 #指针和引用
 指针使用操作符*和->，引用使用操作符&和.；  
@@ -257,6 +282,11 @@ resize();//继承自父类
 		void f3() override;//非法，f3不是虚函数，不能用override修饰。
 	};
 </pre>
+###为什么一般将析构函数设计为虚函数
+将可能会被继承的父类的析构函数设置为虚函数，可以保证当我们new一个子类，然后使用基类指针指向该子类对象，释放基类指针时可以释放掉子类的空间，防止内存泄漏。  
+但是C++默认的析构函数并不是虚函数，因为虚函数需要额外的虚函数表和虚表指针，会占用额外的内存。因此对于不会被继承的类，析构函数不应该是虚函数。只有当需要当作父类时，析构函数才应该设置为虚函数。  
+###静态函数和虚函数的区别
+静态函数在编译的时候就已经确定运行时机；虚函数在运行时动态绑定，因为有虚函数表和虚表指针，调用的时候会产生额外的开销。  
 #pair的使用
 头文件#include <utility\>
 pair<T1,T2> P;  
@@ -289,6 +319,24 @@ vector<pair<T1,T2>\> p;
 	private: mutable bool isValid;
 	public: bool checkList() const {return isValid=true};
 </pre>
+##const放在函数前后的区别
+1）当const放在函数名之前时，修饰的是函数返回值。  
+例：
+<pre class="prettyprit lang-指定样式">
+	const int abc(int a,int b,int c){return a+b+c;}
+	abc(1,2,3)++;//报错，因为函数返回值立即执行了++操作，这是不允许的。
+</pre>
+所以，const放在函数名前，表示返回值不能立即被修改。
+若是返回引用类型：  
+a）当函数返回引用类型时，返回的是对象本身，而不是复制的返回值。  
+b）不能返回局部对象的引用，不能返回局部对象的指针。因为当函数执行完毕后，会释放局部对象/指针的内存空间。  
+例：
+<pre class="prettyprit lang-指定样式">
+	int& abc(int a,int b,int c.int& res){return res=a+b+c;}//合法
+	int& abc(int a,int b,int c){return a+b+c;}//非法
+</pre>  
+2）当const放在函数名之后时，表示是常成员函数，不能修改对象内的任何成员，并且只有成员函数之后可以加const，普通函数不可以。  
+若想要修改成员变量，可以在成员变量定义时，加mutable。  
 #静态成员变量及静态成员函数(static)
 只能用来修饰类的成员函数，不能用来修饰类外函数，同时不能再被const和volatile修饰。  
 在程序编译时分配空间，在程序结束后释放空间。  
@@ -516,3 +564,152 @@ shared_ptr共享相同的状态，而不是多个对象独立的拷贝。
 2）lock：用于获取所管理的对象的强引用（shared_ptr），若expired为true，则返回一个空的shared_ptr；否则返回一个shared_ptr。  
 3）use_count：返回与shared_ptr共享的对象的引用计数。  
 4）reset：将weak_ptr置空。  
+#struct与class区别和联系
+1）默认的成员访问权限不同。  
+class默认是private，struct默认是public。  
+2）默认的继承方式不同。  
+class是private，struct是public。  
+3）class可继承struct，也可继承class，struct亦是如此。  
+4）class和struct都可以使用{}（初始化值列表）来赋初值，但是有两个前提：(a)字段是public，因为public才可以直接访问；(b)没有父类，没有自定义构造方法和虚方法，可以有普通的成员方法。  
+5）定义模板参数，使用typename，也可以使用class，但不能使用struct，一般情况下typename和class是通用的，但有两个例外：(a)当T是一个类，且这个类又有子类时，只能用typename；(b)typename T::innerClass myInnerObject这里的typename告诉编译器，T::innerClass是一个类，程序需要声明一个类的对象，而不是T的静态成员变量。  
+#纯虚函数与抽象类
+纯虚函数的格式：virtual <类型><函数名><形参表>=0;  
+例:virtual double calcPerimeter()=0;//纯虚函数  
+含有纯虚函数的类是抽象类，抽象类无法实例化对象。  
+例:  
+<pre class="prettyprit lang-指定样式">
+	class Shape{
+		public:
+			virtual double calcPerimeter()=0;
+	};
+	Shape shape=new Shape();//非法，抽象类无法实例化对象
+	//纯虚函数的实现交给抽象类的派生类去实现。  
+</pre>
+#void指针 void*
+void指针所指的内存区域，可以存储任何类型的数据，也可以说是没有数据类型，直到使用这一块内存的时候，才知道里面装的数据。  
+可以用任意类型的指针为void指针赋值，但是不能用void指针为已知类型的指针赋值。  
+##C++类的四个默认函数
+1）默认构造函数A()，无参构造函数。  
+2）拷贝（复制）构造函数：A(const A& a)，用一个对象为另一个赋值，当一个类中有指针类型的成员变量时，一定要重写复制构造函数和赋值构造函数。  
+3）析构函数~A()。  
+4）赋值函数A& b=const A& a，用一个对象a直接为另一个赋值。  
+浅复制：复制时仅仅拷贝了数值，若类对象中有指针类型，浅复制后两个对象指向同一块内存空间。  
+深复制：拷贝时会对整个空间进行拷贝。  
+拷贝构造函数与赋值函数的区别：  
+拷贝构造函数是在对象被创建时调用的，赋值函数只能被已经存在了的对象调用。  
+例：  
+<pre class="prettyprit lang-指定样式">
+	string a("hello");
+	string b("world");、
+	string c=a;//拷贝构造函数，而不是赋值构造函数，最好写成string c(a);
+	c=b;//调用了赋值函数
+</pre>
+用户自定义编写拷贝构造函数和赋值函数是为了实现深复制。默认的只会完成浅复制。  
+<pre class="prettyprit lang-指定样式">
+	A(const A& a)=default;//明确指明使用默认拷贝构造函数
+	A(const A& a)=delete;//禁止使用拷贝构造函数
+</pre>
+若自己定义了带参数的构造函数，则在创建一个对象时必须初始化。例：Test t;//会报错，必须改为Test t(10);
+##委托构造函数
+<pre class="prettyprit lang-指定样式">
+	class demo{
+		private:
+			int x,y;
+		public:
+			demo():demo(0,0){}//缺省构造函数，委托给双参数构造函数
+			demo(int a):demo(a,0){}//单参数构造函数，同样委托给双参数构造函数
+			demo(int a,int b){x=a;y=b;}//双参数构造函数，被其他构造函数调用
+	};
+</pre>
+#拷贝构造函数的形参不可以是值传递，必须是引用传递
+<pre class="prettyprit lang-指定样式">
+	class Example{
+		public:
+			Example(int a):aa(a){}
+			Example(Example ex)
+				aa=ex.aa;//拷贝构造函数
+		private:
+			int aa;
+	}
+	Example e1(10);//调用构造函数，合法
+	Example e2=e1;//调用拷贝构造函数，非法
+</pre>
+因为若是值传递，又需要为e1的值拷贝创建一个副本，然后又需要调用拷贝构造函数，形成无限循环。  
+#size,resize和capacity,reserve
+size表明容器中实际有多少个元素，resize会在容器的底部添加或删除一些元素，使容器中的实际元素数量达到指定大小。  
+capacity表明最少添加多少个元素会导致容器重新分配内存，reserve会调整capacity到指定大小。  
+<pre class="prettyprit lang-指定样式">
+	vec.reserve(7);//此时，vec.capacity()=7
+	vec.reserve(5);//此时，vec.capacity()仍为7。
+</pre>
+1)当初始化未指定vec的大小，用push\_back或emplace\_back向里面添加元素时，vec的capacity会以2的指数次幂增加。  
+2）当初始时指定vec的大小为n时，扩容时会分配一个2n的空间，以2倍扩容。  
+#钻石继承问题（菱形继承问题）
+存在的问题是二义性和内存冗余问题。  
+<pre class="prettyprit lang-指定样式">
+					GrandFather
+			Father1					Father2
+					    Son
+</pre>
+Father1类中存在方法setValue()，Father2中有方法getValue(),  
+Son s(10);s.setValue(20);s.getValue()的值仍为10。这是因为在创建Son时，GrandFather被构造两次，Father1和Father2被分别创建，相互独立。因此在Father1中修改value值，不会改变Father2中的value值，这就是钻石继承数据不一致问题，Son中有两个分属于不同对象的value值。  
+通常采用虚基类和虚继承解决数据不一致问题。  
+虚继承：在继承定义中包含了virtual关键字。  
+虚基类：在虚继承中通过关键字virtual继承而来的基类。  
+使用虚基类和虚继承可以让一个指定的基类在继承体系中将其成员数据实例共享给从该基类直接或间接派生出的其他类，即使从不同路径继承而来的同名数据成员在内存中只有一个拷贝，同一个函数名也只有一个映射。  
+<pre class="prettyprit lang-指定样式">
+	class Father1:virtual public GrandFather
+	class Father2:virtual public GrandFather
+	class Son:public Father1,public Father2
+	//此时getValue()的值为20
+</pre>
+##构造函数的调用顺序
+1. 虚基类按声明顺序调用。  
+2. 非虚基类按声明顺序调用。  
+3. 调用派生类中成员对象的构造函数（嵌套类）。  
+4. 派生类自己的构造函数。  
+注意事项：  
+1. 在派生类对象中，同名的虚基类只产生一个虚基类子对象，而同名的非虚基类则产生一个非虚基类子对象。  
+2. 虚基类的子对象由最后派生出来的类的构造函数通过调用虚基类的构造函数来初始化的，若在派生类的成员初始化列表中没有列出对虚基类构造函数的调用，则表示使用虚基类的默认构造函数。  
+3. 虚基类并不是在声明基类时声明的，而是在继承关键字之前。  
+##基类子对象
+<pre class="prettyprit lang-指定样式">
+	class A{
+		public:
+			int aNum;
+	};
+	class B:public A{
+		public:
+			int bNum;
+	};
+	B b;//此时aNum就是b对象的基类子对象。
+</pre>
+#constexpr与const
+constexpr在使用时需要保证返回值和参数时字面值（确定值）。  
+const并不能代表“常量”，它仅仅是对常量的一个修饰，告诉编译器这个变量仅能被初始化，且不能被修改，变量的值可以在运行时也可以在编译时指定。  
+constexpr可以用来修饰变量，函数，构造函数，一旦被修改便可当作常量看待。  
+<pre class="prettyprit lang-指定样式">
+	const int Func(){
+		return 10;
+	}
+	int arr[Func()];//非法
+	constexpr int Func(){
+		return 10;
+	}
+	int arr[Func()];//合法
+	constexpr int Func(){
+		return 1+n;
+	}
+	int a=4;
+	Func(4);//合法
+	Func(cin.get());//非法，非字面值。
+</pre>
+##constexpr的优点
+1. 是一种很强的约束，更好地保证程序的正确语义不被破坏。  
+2. 编译期可以在编译期对constexpr的代码进行非常大的优化，比如将用到的constexpr表达式直接替换成最终结果。  
+3. 相对宏来说，没有额外的开销，更安全可靠。  
+4. constexpr修饰类的构造函数时，必须用初始化列表的形式，表明该对象是一个constexpr类型的对象，是一个字面值常量在编译期确定。  
+<pre class="prettyprit lang-指定样式">
+	const int* p=nullptr;//p是一个指向整型常量的指针
+	constexpr int* q=nullptr;//q是一个指向整数的常量指针
+</pre>
